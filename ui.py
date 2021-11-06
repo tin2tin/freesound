@@ -21,6 +21,9 @@ from bpy.types import Panel
 from . import freesound_api
 from . import freesound
 import datetime
+import gpu
+import bgl
+from gpu_extras.batch import batch_for_shader
 
 class FREESOUND_PT_Panel(Panel):
     """Creates a Panel in the Object properties window"""
@@ -166,3 +169,65 @@ class FREESOUND_PT_Panel(Panel):
             split = split.split(factor=0.6, align=True)
             split.alignment = 'LEFT'                
             split.label(text=author)
+
+            try:
+                license = addon_data.freesound_list[addon_data.active_list_item].license
+            except:
+                license = "Unknown"
+            row = col_list.row(align=True)
+            split = row.split(factor=0.4, align=True)
+            split.alignment = 'RIGHT'
+            split.label(text="License")
+            split = split.split(factor=0.6, align=True)
+            split.alignment = 'LEFT'                
+            split.label(text=license)
+
+def draw():
+    addon_data = bpy.context.scene.freesound_data
+    try:
+        images = addon_data.freesound_list[addon_data.active_list_item].images
+        x1 = 0
+        x2 = 150
+        y1 = 0
+        y2 = 71
+
+        for a in bpy.context.screen.areas:
+            if a.type == "SEQUENCE_EDITOR":
+                for r in a.regions:
+                    if r.type == "UI":
+                        # print(r.type)
+                        x2 = r.width - 21
+
+        shader = gpu.shader.from_builtin('2D_IMAGE')
+        batch = batch_for_shader(
+            shader, 'TRI_FAN',
+            {
+                "pos": ((x1, y1), (x2, y1), (x2, y2), (x1, y2)),
+                "texCoord": ((0, 0), (1, 0), (1, 1), (0, 1)),
+            },
+        )
+
+        image = bpy.data.images[images]
+
+        if image.gl_load():
+            return # an exception happened
+
+        bgl.glActiveTexture(bgl.GL_TEXTURE0)
+        bgl.glBindTexture(bgl.GL_TEXTURE_2D, image.bindcode)
+        shader.bind()
+        shader.uniform_int("image", 0)
+        batch.draw(shader)
+
+        image.gl_free()
+    except:
+        print("Failed to draw waveform.")
+           
+handler = bpy.types.SpaceSequenceEditor.draw_handler_add(draw,(),'UI','POST_PIXEL')
+
+# then remove the handler with ...
+#bpy.types.SpaceSequenceEditor.draw_handler_remove(handler, 'UI')
+
+
+                # tex = bpy.data.images[images]
+                # col = layout.box().column()
+                # col.template_ID_preview(data=tex, show_buttons=False)
