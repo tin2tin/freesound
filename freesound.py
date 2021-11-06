@@ -9,6 +9,7 @@ from bpy import ops,context
 import datetime, time
 import aud
 from . import freesound_api
+import requests
 
 class FREESOUND_UL_List(btypes.UIList):
     sound_id = 0
@@ -144,6 +145,17 @@ class FreeSoundItem(btypes.PropertyGroup):
         description="The author of this sound",
         default="Author"
     )
+    license: StringProperty(
+        name="License",
+        description="The license of this sound",
+        default="License"
+    )
+
+    images: StringProperty(
+        name="Images",
+        description="The images of this sound",
+        default="Images"
+    )
 
     @classmethod
     def poll(cls, context):
@@ -258,14 +270,28 @@ class Freesound_Page(btypes.Operator):
                 Freesound_Search.results_pager = results_pager.get_page(addon_data.current_page)
                 addon_data.freesound_list.clear()
 
+                win = bpy.context.window_manager
+                win.progress_begin(0, 100)
+
                 for i in range(0, len(Freesound_Search.results_pager.results)):
                     sound = Freesound_Search.results_pager[i]
                     _sound = addon_data.freesound_list.add()
                     _sound.sound_id = str(sound.id)
+                    _sound.license = str(sound.license)
                     _sound.name = str(sound.name)
                     _sound.avg_rating = sound.avg_rating
                     _sound.duration = str(sound.duration)
                     _sound.author = str(sound.username)
+                    if (sound.images.waveform_m):
+                        path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                        if not os.path.exists(path):
+                            url = str(sound.images.waveform_l)
+                            r = requests.get(url)
+                            open(path, 'wb').write(r.content)
+                        bpy.data.images.load(path)
+                        _sound.images = _sound.name + ".png"
+                    win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+                win.progress_end()
                 Freesound_Search.results_pager = results_pager
 
         else:
@@ -408,14 +434,18 @@ class Freesound_Search(btypes.Operator):
             filter_string=duration
 
         rating = addon_data.search_filter
-        Freesound_Search.results_pager = client.text_search(query=addon_data.search_item,filter=filter_string, sort=rating,fields="id,name,previews,username,duration,avg_rating,num_ratings,comment,comments")
+        Freesound_Search.results_pager = client.text_search(query=addon_data.search_item,filter=filter_string, sort=rating,fields="id,name,license,previews,username,duration,avg_rating,num_ratings,comment,comments,images")
         addon_data.freesound_list.clear()
         addon_data.sounds = Freesound_Search.results_pager.count
+
+        win = bpy.context.window_manager
+        win.progress_begin(0, 100)
 
         for i in range(0, len(Freesound_Search.results_pager.results)):
             sound = Freesound_Search.results_pager[i]
             _sound = addon_data.freesound_list.add()
             _sound.sound_id = str(sound.id)
+            _sound.license = str(sound.license)
             _sound.avg_rating = sound.avg_rating
             _sound.num_ratings = str(sound.num_ratings)
             _sound.comment = sound.comment
@@ -423,6 +453,15 @@ class Freesound_Search(btypes.Operator):
             _sound.duration = str(sound.duration)
             _sound.name = sound.name
             _sound.author = sound.username
+            # if (sound.images.waveform_l):
+            #     url = str(sound.images.waveform_l)
+            #     r = requests.get(url)
+            #     path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+            #     open(path, 'wb').write(r.content)
+            #     bpy.data.images.load(path)
+            _sound.images = _sound.name + ".png"
+            win.progress_update((i/(len(Freesound_Search.results_pager.results)))*100)
+        win.progress_end()
 
         if len(addon_data.freesound_list) > 0:
             addon_data.freesound_list_loaded = True
@@ -456,14 +495,28 @@ class Freesound_Next(btypes.Operator):
                 addon_data.freesound_list.clear()
                 Freesound_Search.results_pager = results_pager.next_page()
 
+                win = bpy.context.window_manager
+                win.progress_begin(0, 100)
+
                 for i in range(0, len(Freesound_Search.results_pager.results)):
                     sound = Freesound_Search.results_pager[i]
                     _sound = addon_data.freesound_list.add()
                     _sound.sound_id = str(sound.id)
+                    _sound.license = str(sound.license)
                     _sound.name = str(sound.name)
                     _sound.avg_rating = sound.avg_rating
                     _sound.duration = str(sound.duration)
                     _sound.author = str(sound.username)
+                    if (sound.images.waveform_m):
+                        path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                        if not os.path.exists(path):
+                            url = str(sound.images.waveform_l)
+                            r = requests.get(url)
+                            open(path, 'wb').write(r.content)
+                        bpy.data.images.load(path)
+                        _sound.images = _sound.name + ".png"
+                    win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+                win.progress_end()
 
                 addon_data.current_page += 1
 
@@ -493,14 +546,28 @@ class Freesound_Next10(btypes.Operator):
                 addon_data.freesound_list.clear()
                 Freesound_Search.results_pager = results_pager.get_page(addon_data.current_page)
 
+                win = bpy.context.window_manager
+                win.progress_begin(0, 100)
+
                 for i in range(0, len(Freesound_Search.results_pager.results)):
                     sound = Freesound_Search.results_pager[i]
                     _sound = addon_data.freesound_list.add()
                     _sound.sound_id = str(sound.id)
+                    _sound.license = str(sound.license)
                     _sound.name = str(sound.name)
                     _sound.avg_rating = sound.avg_rating
                     _sound.duration = str(sound.duration)
                     _sound.author = str(sound.username)
+                    if (sound.images.waveform_m):
+                        path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                        if not os.path.exists(path):
+                            url = str(sound.images.waveform_l)
+                            r = requests.get(url)
+                            open(path, 'wb').write(r.content)
+                        bpy.data.images.load(path)
+                        _sound.images = _sound.name + ".png"
+                    win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+                win.progress_end()
         return {'FINISHED'}
 
 # Freesound Last page search
@@ -519,14 +586,28 @@ class Freesound_Last(btypes.Operator):
             addon_data.freesound_list.clear()
             Freesound_Search.results_pager = results_pager.get_page(addon_data.pager_num)
 
+            win = bpy.context.window_manager
+            win.progress_begin(0, 100)
+
             for i in range(0, len(Freesound_Search.results_pager.results)):
                 sound = Freesound_Search.results_pager[i]
                 _sound = addon_data.freesound_list.add()
                 _sound.sound_id = str(sound.id)
+                _sound.license = str(sound.license)
                 _sound.name = str(sound.name)
                 _sound.avg_rating = sound.avg_rating
                 _sound.duration = str(sound.duration)
                 _sound.author = str(sound.username)
+                if (sound.images.waveform_m):
+                    path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                    if not os.path.exists(path):
+                        url = str(sound.images.waveform_l)
+                        r = requests.get(url)
+                        open(path, 'wb').write(r.content)
+                    bpy.data.images.load(path)
+                    _sound.images = _sound.name + ".png"
+                win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+            win.progress_end()
             addon_data.current_page = addon_data.pager_num
 
         return {'FINISHED'}
@@ -551,14 +632,28 @@ class Freesound_Prev(btypes.Operator):
             addon_data.freesound_list.clear()
             Freesound_Search.results_pager = results_pager.previous_page()
 
+            win = bpy.context.window_manager
+            win.progress_begin(0, 100)
+
             for i in range(0, len(Freesound_Search.results_pager.results)):
                 sound = Freesound_Search.results_pager[i]
                 _sound = addon_data.freesound_list.add()
                 _sound.sound_id = str(sound.id)
+                _sound.license = str(sound.license)
                 _sound.name = sound.name
                 _sound.avg_rating = sound.avg_rating
                 _sound.duration = str(sound.duration)
                 _sound.author = sound.username
+                if (sound.images.waveform_m):
+                    path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                    if not os.path.exists(path):
+                        url = str(sound.images.waveform_l)
+                        r = requests.get(url)
+                        open(path, 'wb').write(r.content)
+                    bpy.data.images.load(path)
+                    _sound.images = _sound.name + ".png"
+                win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+            win.progress_end()
             addon_data.current_page -= 1
         return {'FINISHED'}
 
@@ -581,14 +676,28 @@ class Freesound_Prev10(btypes.Operator):
             addon_data.freesound_list.clear()
             Freesound_Search.results_pager = results_pager.get_page(addon_data.current_page - 10)
 
+            win = bpy.context.window_manager
+            win.progress_begin(0, 100)
+
             for i in range(0, len(Freesound_Search.results_pager.results)):
                 sound = Freesound_Search.results_pager[i]
                 _sound = addon_data.freesound_list.add()
                 _sound.sound_id = str(sound.id)
+                _sound.license = str(sound.license)
                 _sound.name = str(sound.name)
                 _sound.avg_rating = sound.avg_rating
                 _sound.duration = str(sound.duration)
                 _sound.author = str(sound.username)
+                if (sound.images.waveform_m):
+                    path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                    if not os.path.exists(path):
+                        url = str(sound.images.waveform_l)
+                        r = requests.get(url)
+                        open(path, 'wb').write(r.content)
+                    bpy.data.images.load(path)
+                    _sound.images = _sound.name + ".png"
+                win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+            win.progress_end()
             addon_data.current_page -= 10
         return {'FINISHED'}
 
@@ -607,17 +716,33 @@ class Freesound_First(btypes.Operator):
             addon_data.freesound_list.clear()
             Freesound_Search.results_pager = results_pager.get_page(1)
 
+            win = bpy.context.window_manager
+            win.progress_begin(0, 100)
+
             for i in range(0, len(Freesound_Search.results_pager.results)):
                 sound = Freesound_Search.results_pager[i]
                 _sound = addon_data.freesound_list.add()
                 _sound.sound_id = str(sound.id)
+                _sound.license = str(sound.license)
                 _sound.name = str(sound.name)
                 _sound.avg_rating = sound.avg_rating
                 _sound.duration = str(sound.duration)
                 _sound.author = str(sound.username)
+                if (sound.images.waveform_m):
+                    path = dirname(realpath(__file__)) + '/' + _sound.name + ".png"
+                    if not os.path.exists(path):
+                        url = str(sound.images.waveform_l)
+                        r = requests.get(url)
+                        open(path, 'wb').write(r.content)
+                    bpy.data.images.load(path)
+                    _sound.images = _sound.name + ".png"
+                win.progress_update((i/len(Freesound_Search.results_pager.results))*100)
+            win.progress_end()
             addon_data.current_page = 1
 
         return {'FINISHED'}
+
+
 # Freesound Stop
 class Freesound_Pause(btypes.Operator):
     bl_label = 'Pause'
@@ -631,4 +756,3 @@ class Freesound_Pause(btypes.Operator):
             addon_data.sound_is_playing = False
             Freesound_Play.handle.stop()
         return {'FINISHED'}
-
